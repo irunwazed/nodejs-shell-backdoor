@@ -1,19 +1,49 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const util = require('util');
+
+   
+// const readDir = util.promisify(fs.readdir);
 
 
 http
   .createServer((request, response) => {
+
+		let dir = './';
+
+
     console.log(`request ${request.url}`);
-		// console.log(request.url);
-		let data = '';
-		request.on('dir', chunk => {
-			data += chunk;
-		});
-		console.log(data)
+		req = request.url.split('?');
+
+		get = [];
+		if(req.length > 1){
+			cookies = req[1].split('&');
+			for(let i = 0; i < cookies.length; i++){
+				cookie = cookies[i].split('=');
+				get.push({
+					name: cookie[0],
+					value: cookie[1],
+				})
+			}
+		}
+		// console.log(get);
+
+		for(let i = 0; i < get.length; i++){
+			if(get[i].name == 'dir'){
+				dir = get[i].value
+
+				if(dir[dir.length-1] != '/'){
+					dir += '/';
+				}
+
+			}
+		}
 		
-		let html = viewDir('./');
+		
+		let html = '';
+		html = viewDir(dir);
+		// console.log(html)
 		// html = viewLogin();
 
 
@@ -32,26 +62,27 @@ var myFiles = [];
 const loadDir = (_dir) => {
 	fs.readdir(_dir, (err, files) => {
 		myFiles = [];
-		files.forEach(file => {
+		if(files != undefined){
 
-			let stat = fs.lstatSync('./'+file);
-			temp = {
-				name: file,
-				dir: stat.isDirectory(),
-				permissions: '0' + (stat.mode & parseInt('777', 8)).toString(8),
-				stat: stat,
-			}
-
-
-			myFiles.push(temp)
-		});
+			files.forEach((file) => {
+				let stat = fs.lstatSync(_dir+file);
+				temp = {
+					name: file,
+					dir: stat.isDirectory(),
+					permissions: '0' + (stat.mode & parseInt('777', 8)).toString(8),
+					stat: stat,
+				}
+	
+	
+				myFiles.push(temp)
+			});
+		}
 	});
 }
 
 const viewDir = (_dir) => {
 	
 	loadDir(_dir);
-
 	// console.log(myFiles);
 
 	let html = `
@@ -171,10 +202,30 @@ const viewDir = (_dir) => {
             <tbody>
 	
 	`;
+
+	
+	html += `
+	<tr>
+	<td><span class='glyphicon glyphicon-folder-open' style='color:#FFDD33'></span> &nbsp;<a href="?dir=.." >..</a></td>
+	<td>dir</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td></td>
+	<td>
+		<a href="?dir=<?=$dir?>&edit=<?=$tempFile?>" class="glyphicon glyphicon-edit"></a> | 
+		<a href="?dir=<?=$dir?>&view=<?=$tempFile?>" class="glyphicon glyphicon-search"></a> | 
+		<a href="?dir=<?=$dir?>&action=newFolder" > New Folder</a> | 
+		<a href="?dir=<?=$dir?>&action=newFile" > New File</a> | 
+		<a href="?dir=<?=$dir?>&rename=<?=$entry?>"> rename</a>
+	</td>
+	</tr>
+	`;
+	
 	for(let i = 0; i < myFiles.length; i++){
 		html += `
 		<tr>
-		<td>`+(myFiles[i].dir?`<span class='glyphicon glyphicon-folder-open' style='color:#FFDD33'></span>`:`<span class="glyphicon glyphicon-file" style="color:#CCCCCC"></span>`)+' &nbsp;'+myFiles[i].name+`</td>
+		<td>`+(myFiles[i].dir?`<span class='glyphicon glyphicon-folder-open' style='color:#FFDD33'></span>`:`<span class="glyphicon glyphicon-file" style="color:#CCCCCC"></span>`)+' &nbsp;<a href="?dir='+_dir+myFiles[i].name+'" >'+myFiles[i].name+`</a></td>
 		<td>`+(myFiles[i].dir?'dir':'file')+`</td>
 		<td>`+myFiles[i].stat.size+`</td>
 		<td>`+myFiles[i].stat.atime+`</td>
